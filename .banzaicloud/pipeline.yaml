@@ -28,7 +28,8 @@ pipeline:
   build_image:
     image: banzaicloud/drone-kaniko
     dockerfile: Dockerfile
-    repo: 'gcr.io/seba-project/{{ .CICD_REPO }}'
+    registry: gcr.io
+    repo: 'seba-project/{{ .CICD_REPO }}'
     tags: '{{ trunc 7 .CICD_COMMIT_SHA }}'
     secretFrom:
       JSON_KEY:
