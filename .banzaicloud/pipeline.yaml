@@ -10,20 +10,31 @@ pipeline:
     image: maven:3.5-jdk-11-slim
     commands:
     - mvn -Dmaven.repo.local=${PWD}/.m2/repository clean test
+#  build_image:
+#    commands:
+#    - mvn -Dmaven.repo.local=${PWD}/.m2/repository compile jib:build
+#    environment:
+#      DOCKER_REPO: '{{ .CICD_REPO }}'
+#      DOCKER_TAG: '{{ trunc 7 .CICD_COMMIT_SHA }}'
+#    image: maven:3.5-jdk-11-slim
+#    secretFrom:
+#      DOCKER_PASSWORD:
+#        keyRef: password
+#        name: docker-hub
+#      DOCKER_USERNAME:
+#        keyRef: username
+#        name: docker-hub
+
   build_image:
-    commands:
-    - mvn -Dmaven.repo.local=${PWD}/.m2/repository compile jib:build
-    environment:
-      DOCKER_REPO: '{{ .CICD_REPO }}'
-      DOCKER_TAG: '{{ trunc 7 .CICD_COMMIT_SHA }}'
-    image: maven:3.5-jdk-11-slim
+    image: banzaicloud/kaniko-plugin
+    dockerfile: Dockerfile
+    repo: 'gcr.io/seba-project/{{ .CICD_REPO }}'
+    tags: '{{ trunc 7 .CICD_COMMIT_SHA }}'
     secretFrom:
-      DOCKER_PASSWORD:
-        keyRef: password
-        name: docker-hub
-      DOCKER_USERNAME:
-        keyRef: username
-        name: docker-hub
+      JSON_KEY:
+        name: gcr-secret
+        keyRef: json-key
+        
   package_application:
     image: lachlanevenson/k8s-helm:latest
     commands:
@@ -31,6 +42,20 @@ pipeline:
     - helm repo add banzaicloud-stable https://kubernetes-charts.banzaicloud.com
     - helm dep update ./.banzaicloud/charts/spotguide-spring-boot
     - helm package ./.banzaicloud/charts/spotguide-spring-boot
+  install_gcr_secret:
+    when:
+      branch:
+        include: [master]
+    image: banzaicloud/ci-pipeline-client:0.11
+    action: InstallSecret
+    clusterSecret:
+      name: gcr-secret
+      namespace: default
+      merge: true
+      spec:
+        - name: json-key
+          source: json-key
+  
   install_mysql_user_secret:
     action: InstallSecret
     clusterSecret:
