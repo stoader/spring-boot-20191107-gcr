@@ -97,7 +97,7 @@ pipeline:
       values:
         image:
           pullPolicy: Always
-          repository: gcr.io/seba-project/{{ .CICD_REPO }}'
+          repository: gcr.io/seba-project/{{ .CICD_REPO }}
           tag: '{{ trunc 7 .CICD_COMMIT_SHA }}'
         ingress:
           annotations:
